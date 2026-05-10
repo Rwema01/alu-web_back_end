@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-""" function floor which returns the floor of the float.
-"""
+"""type-annotated function floor which takes a float n
+as argument and returns the floor of the float"""
 
 
 def floor(n: float) -> int:
-    """ Return the floor of float """
-    return int(n) if n >= 0 else int(n) - 1
+    """return a int"""
+    return int(n)

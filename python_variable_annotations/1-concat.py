@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-""" Function that concantinate two string.
-"""
+"""type-annotated function concat that takes a string str1
+and a string str2 as arguments and returns a concatenated string"""
 
 
 def concat(str1: str, str2: str) -> str:
-    """ Concantinate two strings and return result.
-    """
-    return str(str1) + str(str2)
+    """return a str"""
+    return str1 + str2
