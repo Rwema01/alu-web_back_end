@@ -48,47 +48,84 @@ def get_user(id) -> Union[Dict[str, Union[str, None]], None]:
     Returns:
         (Dict): user dictionary if id is valid else None
     """
-    return users.get(int(id), None)
+    try:
+        return users.get(int(id))
+    except (ValueError, TypeError):
+        return None
 
 
 @babel.localeselector
 def get_locale() -> str:
     """
     Gets locale from request object
+    Priority order:
+    1. Locale from URL parameters
+    2. Locale from user settings
+    3. Locale from request header
+    4. Default locale
     """
-    options = [
-        request.args.get('locale', '').strip(),
-        g.user.get('locale', None) if g.user else None,
-        request.accept_languages.best_match(app.config['LANGUAGES']),
-        Config.BABEL_DEFAULT_LOCALE
-    ]
-    for locale in options:
-        if locale and locale in Config.LANGUAGES:
-            return locale
+    # Priority 1: URL parameter
+    locale = request.args.get('locale', '').strip()
+    if locale and locale in Config.LANGUAGES:
+        return locale
+    
+    # Priority 2: User settings
+    if g.user and g.user.get('locale') in Config.LANGUAGES:
+        return g.user.get('locale')
+    
+    # Priority 3: Request header
+    best_match = request.accept_languages.best_match(app.config['LANGUAGES'])
+    if best_match:
+        return best_match
+    
+    # Priority 4: Default locale
+    return Config.BABEL_DEFAULT_LOCALE
 
 
 @babel.timezoneselector
 def get_timezone() -> str:
     """
     Gets timezone from request object
+    Priority order:
+    1. Timezone from URL parameters
+    2. Timezone from user settings
+    3. Default timezone
     """
+    # Priority 1: URL parameter
     tz = request.args.get('timezone', '').strip()
+    
+    # Priority 2: User settings
     if not tz and g.user:
-        tz = g.user['timezone']
+        tz = g.user.get('timezone', '')
+    
+    # Validate timezone and return
     try:
-        tz = pytz.timezone(tz).zone
+        if tz:
+            # Validate the timezone exists
+            pytz.timezone(tz)
+            return tz
     except pytz.exceptions.UnknownTimeZoneError:
-        tz = app.config['BABEL_DEFAULT_TIMEZONE']
-    return tz
+        pass
+    
+    # Priority 3: Default timezone
+    return app.config['BABEL_DEFAULT_TIMEZONE']
 
 
 @app.before_request
 def before_request() -> None:
     """
     Adds valid user to the global session object `g`
+    and sets the current time
     """
-    setattr(g, 'user', get_user(request.args.get('login_as', 0)))
-    setattr(g, 'time', format_datetime(datetime.datetime.now()))
+    # Get user from login_as parameter
+    login_as = request.args.get('login_as')
+    if login_as:
+        g.user = get_user(login_as)
+    else:
+        g.user = None
+    
+    # Set current time for template - use 'current_time' to match template
+    g.current_time = format_datetime(datetime.datetime.now())
 
 
 @app.route('/', strict_slashes=False)
